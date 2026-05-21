@@ -1,0 +1,39 @@
+#!/sbin/openrc-run
+
+name="Steam Hour Booster"
+description="Steam booster backend + dashboard"
+
+supervisor="supervise-daemon"
+command="/usr/bin/node"
+command_args="${SBC_APP_DIR:-/opt/steam-hour-booster}/dist/index.js"
+directory="${SBC_APP_DIR:-/opt/steam-hour-booster}"
+command_user="${SBC_USER:-steambooster}:${SBC_GROUP:-steambooster}"
+pidfile="/run/${RC_SVCNAME}.pid"
+
+output_log="${SBC_LOG_FILE:-/var/log/steam-hour-booster.log}"
+error_log="${SBC_ERROR_LOG_FILE:-/var/log/steam-hour-booster.err.log}"
+
+respawn_delay="${SBC_RESPAWN_DELAY:-5}"
+respawn_max="${SBC_RESPAWN_MAX:-10}"
+respawn_period="${SBC_RESPAWN_PERIOD:-60}"
+
+depend() {
+  need net localmount
+}
+
+start_pre() {
+  checkpath --directory --owner "${SBC_USER:-steambooster}:${SBC_GROUP:-steambooster}" --mode 0755 "${SBC_APP_DIR:-/opt/steam-hour-booster}"
+  checkpath --directory --mode 0755 /run
+  checkpath --file --owner "${SBC_USER:-steambooster}:${SBC_GROUP:-steambooster}" --mode 0644 "${output_log}"
+  checkpath --file --owner "${SBC_USER:-steambooster}:${SBC_GROUP:-steambooster}" --mode 0644 "${error_log}"
+
+  if [ ! -f "${SBC_APP_DIR:-/opt/steam-hour-booster}/dist/index.js" ]; then
+    eerror "Missing build output: ${SBC_APP_DIR:-/opt/steam-hour-booster}/dist/index.js"
+    eerror "Run: npm run build:all"
+    return 1
+  fi
+
+  if [ ! -f "${SBC_APP_DIR:-/opt/steam-hour-booster}/.env" ]; then
+    ewarn "Missing .env in ${SBC_APP_DIR:-/opt/steam-hour-booster}"
+  fi
+}

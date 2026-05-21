@@ -1,0 +1,11 @@
+node_modules
+dist
+web/node_modules
+web/dist
+.git
+.env
+accounts.json
+*.log
+docs
+scripts
+.vscode

@@ -1,0 +1,54 @@
+# ── Dependencies ──────────────────────────────────────────────────
+node_modules/
+web/node_modules/
+
+# ── Build output ──────────────────────────────────────────────────
+dist/
+web/dist/
+
+# ── Environment & credentials — NEVER commit ──────────────────────
+.env
+.env.*
+!.env.example
+web/.env
+web/.env.*
+!web/.env.example
+
+# Steam accounts — contains usernames, passwords, shared secrets
+accounts.json
+
+# ── Logs ──────────────────────────────────────────────────────────
+*.log
+logs/
+web/*.log
+
+# ── TypeScript build artefacts ────────────────────────────────────
+*.tsbuildinfo
+web/*.tsbuildinfo
+
+# Generated JS/declaration files from tsc compiling config files
+web/tailwind.config.d.ts
+web/tailwind.config.js
+web/vite.config.d.ts
+web/vite.config.js
+
+# ── Editor / OS ───────────────────────────────────────────────────
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# ── Private / local files ─────────────────────────────────────────
+Fotoreferencia/
+premortem-*.html
+premortem-*.md
+.claude/
+.agents/
+web/.agents/
+skills-lock.json
+web/skills-lock.json

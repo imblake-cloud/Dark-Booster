@@ -1,0 +1,23 @@
+services:
+  steam-hour-booster:
+    build: .
+    container_name: steam-hour-booster
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Production mode — always on in Docker
+      - NODE_ENV=production
+      # Listen on all interfaces so Docker port mapping works
+      - API_HOST=0.0.0.0
+      # Pin internal port; to use a different host port, change the LEFT side of ports: below
+      - API_PORT=3100
+    ports:
+      # HOST:CONTAINER — change 3100 on the left if that port is already in use on your host
+      - "3100:3100"
+    volumes:
+      # IMPORTANT: accounts.json must exist as a FILE before the first `docker compose up`.
+      # If it doesn't exist, Docker will create a directory named accounts.json, causing
+      # all account/token writes to fail silently. Fix:
+      #   cp accounts.json.example accounts.json   (or: echo '[]' > accounts.json)
+      # then restart. The app will exit with a clear error if it detects this condition.
+      - ./accounts.json:/app/accounts.json
