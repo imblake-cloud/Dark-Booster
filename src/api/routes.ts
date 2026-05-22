@@ -229,8 +229,15 @@ export const buildRoutes = ({ steamService, logger, config, gameDb }: RouteDepen
   // ── Error handler ─────────────────────────────────────────────────────────
   router.use((error: unknown, _req: Request, res: Response, _next: NextFunction) => {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error({ err: message }, "API request failed.");
-    res.status(500).json({ error: message });
+    const status  = (typeof error === "object" && error !== null && "statusCode" in error)
+      ? Number((error as { statusCode: unknown }).statusCode)
+      : 500;
+    const safeStatus = Number.isInteger(status) && status >= 400 && status < 600 ? status : 500;
+    logger.error({ err: message, status: safeStatus }, "API request failed.");
+    const clientMessage = safeStatus < 500 || config.nodeEnv !== "production"
+      ? message
+      : "Internal server error.";
+    res.status(safeStatus).json({ error: clientMessage });
   });
 
   return router;

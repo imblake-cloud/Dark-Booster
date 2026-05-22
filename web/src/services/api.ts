@@ -1,9 +1,14 @@
 import axios from "axios";
 import type { AccountSnapshot, AccountSummary, GameOption, GuardChallenge } from "../types";
 
+const headers: Record<string, string> = { "Content-Type": "application/json" };
+if (import.meta.env.VITE_API_TOKEN) {
+  headers["Authorization"] = `Bearer ${import.meta.env.VITE_API_TOKEN}`;
+}
+
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || window.location.origin,
-  headers: { "Content-Type": "application/json" },
+  headers,
 });
 
 // ── Accounts ─────────────────────────────────────────────────────────────────

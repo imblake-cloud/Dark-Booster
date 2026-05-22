@@ -33,10 +33,26 @@ export class ApiServer {
     app.disable("x-powered-by");
 
     app.use((_req, res, next) => {
+      res.setHeader("X-Content-Type-Options", "nosniff");
+      res.setHeader("X-Frame-Options", "SAMEORIGIN");
+      res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+      res.setHeader("Cross-Origin-Opener-Policy", "same-origin");
+      next();
+    });
+
+    app.use((req, res, next) => {
       res.header("Access-Control-Allow-Origin", "*");
-      res.header("Access-Control-Allow-Headers", "Content-Type");
+      res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
       res.header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS");
-      if (_req.method === "OPTIONS") { res.sendStatus(204); return; }
+      if (req.method === "OPTIONS") { res.sendStatus(204); return; }
+      next();
+    });
+
+    app.use((req, res, next) => {
+      const start = Date.now();
+      res.on("finish", () => {
+        this.logger.info({ method: req.method, path: req.path, status: res.statusCode, ms: Date.now() - start }, "http");
+      });
       next();
     });
 
@@ -61,7 +77,7 @@ export class ApiServer {
 
         this.logger.info({ staticDir }, "Dashboard static files enabled.");
       } else {
-        this.logger.warn({ staticDir }, "DASHBOARD_STATIC_ENABLED=true but static files not found. Run npm run build:all first.");
+        this.logger.warn({ staticDir }, "DASHBOARD_STATIC_ENABLED=true but static files not found. Run pnpm run build:all first.");
       }
     }
 
