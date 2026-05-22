@@ -5,6 +5,7 @@ import type { SteamService } from "../services/steamService";
 import type { AppConfig } from "../config/config";
 import type { GameDb } from "../services/gameDb";
 import { parseAppIds } from "../utils/security";
+import { ValidationError } from "../utils/errors";
 
 interface RouteDependencies {
   steamService: SteamService;
@@ -23,7 +24,7 @@ const parseMode = (value: unknown): StealthMode => {
   if (mode === "normal"  || mode === "off") return StealthMode.NORMAL;
   if (mode === "invisible" || mode === "on") return StealthMode.INVISIBLE;
   if (mode === "offline") return StealthMode.OFFLINE;
-  throw new Error("Invalid stealth mode. Use normal|invisible|offline.");
+  throw new ValidationError("Invalid stealth mode. Use normal|invisible|offline.");
 };
 
 const parseBodyAppIds = (bodyValue: unknown): number[] => {

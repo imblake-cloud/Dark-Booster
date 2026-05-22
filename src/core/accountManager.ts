@@ -6,6 +6,7 @@ import type {
   SteamAccountConfig,
 } from "../models/account";
 import { decryptIfEncrypted } from "../utils/security";
+import { ConflictError, NotFoundError } from "../utils/errors";
 
 interface RawAccountConfig {
   id?: string;
@@ -102,7 +103,7 @@ export class AccountManager {
   getAccount(accountId: string): SteamAccountConfig {
     const account = this.accounts.get(accountId);
     if (!account) {
-      throw new Error(`Unknown account ID: ${accountId}`);
+      throw new NotFoundError(`Unknown account ID: ${accountId}`);
     }
     return account;
   }
@@ -139,7 +140,7 @@ export class AccountManager {
     );
 
     if (this.accounts.has(normalized.id)) {
-      throw new Error(`Account ID already exists: ${normalized.id}`);
+      throw new ConflictError(`Account ID already exists: ${normalized.id}`);
     }
 
     this.accounts.set(normalized.id, normalized);
@@ -151,7 +152,7 @@ export class AccountManager {
 
   async removeAccount(accountId: string): Promise<void> {
     if (!this.accounts.has(accountId)) {
-      throw new Error(`Unknown account ID: ${accountId}`);
+      throw new NotFoundError(`Unknown account ID: ${accountId}`);
     }
     this.accounts.delete(accountId);
     await this.persistAccounts();

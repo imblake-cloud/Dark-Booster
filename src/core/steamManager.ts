@@ -15,6 +15,7 @@ import type {
 } from "../models/account";
 import { AccountStatus, StealthMode } from "../models/enums";
 import { sanitizeErrorMessage } from "../utils/security";
+import { ConflictError, NotFoundError, ValidationError } from "../utils/errors";
 
 const PERSONA_OFFLINE = 0;
 const PERSONA_ONLINE = 1;
@@ -59,7 +60,12 @@ interface PendingGuardEntry {
   clearOnSubmit?: boolean;
 }
 
-export class SteamManager extends EventEmitter {
+type SteamManagerEventMap = {
+  state_change: [];
+  guards_change: [];
+};
+
+export class SteamManager extends EventEmitter<SteamManagerEventMap> {
   private readonly accounts = new Map<string, SteamAccountConfig>();
   private readonly states = new Map<string, AccountRuntimeState>();
   private readonly clients = new Map<string, SteamClient>();
@@ -101,7 +107,7 @@ export class SteamManager extends EventEmitter {
 
   addAccount(account: SteamAccountConfig): void {
     if (this.accounts.has(account.id)) {
-      throw new Error(`Account ID already exists: ${account.id}`);
+      throw new ConflictError(`Account ID already exists: ${account.id}`);
     }
 
     this.accounts.set(account.id, account);
@@ -176,12 +182,12 @@ export class SteamManager extends EventEmitter {
 
   async startBoost(accountId: string, appIds: number[]): Promise<void> {
     if (!appIds.length) {
-      throw new Error("At least one app ID is required.");
+      throw new ValidationError("At least one app ID is required.");
     }
 
     const max = this.settings.maxGamesPerAccount;
     if (appIds.length > max) {
-      throw new Error(`Too many app IDs: ${appIds.length} requested, maximum is ${max}.`);
+      throw new ValidationError(`Too many app IDs: ${appIds.length} requested, maximum is ${max}.`);
     }
     if (appIds.length > MAX_SAFE_GAMES) {
       this.logger.warn(
@@ -201,7 +207,7 @@ export class SteamManager extends EventEmitter {
       state.status !== AccountStatus.ONLINE &&
       state.status !== AccountStatus.BOOSTING
     ) {
-      throw new Error(
+      throw new ConflictError(
         `Account ${accountId} is ${state.status}. Connect account before boosting.`,
       );
     }
@@ -262,12 +268,12 @@ export class SteamManager extends EventEmitter {
     }
 
     if (!pending.challenge.requiresCode || !pending.callback) {
-      throw new Error("This pending login must be approved in Steam Mobile and does not accept a code.");
+      throw new ValidationError("This pending login must be approved in Steam Mobile and does not accept a code.");
     }
 
     const sanitized = code.trim();
     if (!sanitized) {
-      throw new Error("Steam Guard code cannot be empty.");
+      throw new ValidationError("Steam Guard code cannot be empty.");
     }
 
     const maybePromise = pending.callback(sanitized);
@@ -992,7 +998,7 @@ export class SteamManager extends EventEmitter {
   private requireAccount(accountId: string): SteamAccountConfig {
     const account = this.accounts.get(accountId);
     if (!account) {
-      throw new Error(`Unknown account ID: ${accountId}`);
+      throw new NotFoundError(`Unknown account ID: ${accountId}`);
     }
     return account;
   }
