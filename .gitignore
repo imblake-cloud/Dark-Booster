@@ -58,10 +58,18 @@ skills-lock.json
 web/skills-lock.json
 agent.md
 
-# Design assets — branding files, not needed to run the app
+# Design assets — private branding files
 web/Logo Dark Booster/
 web/Logo*/
 *.psd
 *.ai
 *.fig
 *.sketch
+
+# Personal deployment (Alpine Linux / OpenRC)
+scripts/alpine/
+docs/ALPINE_DEPLOYMENT.md
+
+# Frontend dev environment config
+web/.env.example
+web/.env

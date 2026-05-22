@@ -19,8 +19,7 @@
     "typecheck": "tsc --noEmit",
     "web:dev": "pnpm --filter steam-hour-booster-web dev",
     "web:build": "pnpm --filter steam-hour-booster-web build",
-    "web:preview": "pnpm --filter steam-hour-booster-web preview",
-    "alpine:install-service": "sh ./scripts/alpine/install-openrc.sh"
+    "web:preview": "pnpm --filter steam-hour-booster-web preview"
   },
   "dependencies": {
     "dotenv": "^16.6.1",

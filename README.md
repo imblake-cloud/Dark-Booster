@@ -16,9 +16,8 @@
   <p>
     <a href="#-quick-start">Quick Start</a> ·
     <a href="#%EF%B8%8F-configuration">Configuration</a> ·
+    <a href="#-linux--systemd">Linux</a> ·
     <a href="#-development">Development</a> ·
-    <a href="#-linux--systemd-ubuntu-debian-fedora-arch">Linux</a> ·
-    <a href="#%EF%B8%8F-alpine-linux--openrc">Alpine</a> ·
     <a href="https://github.com/imblake-cloud/Dark-Booster/issues">Issues</a>
   </p>
 </div>
@@ -51,40 +50,48 @@ Dark Booster connects to Steam using your account credentials and starts idle se
 
 ### Docker (recommended)
 
-**1.** Clone the repo and enter the directory:
+**1.** Clone and enter the directory:
 
 ```bash
 git clone https://github.com/imblake-cloud/Dark-Booster
 cd Dark-Booster
 ```
 
-**2.** Create your config files:
+**2.** Create config files and start:
 
 ```bash
-cp .env.example .env           # edit with your settings
-cp accounts.json.example accounts.json
+make setup    # creates .env and accounts.json from templates
+# Edit .env — at minimum review API_HOST, API_PORT, and API_TOKEN
+make start    # builds the Docker image and starts the service
 ```
 
-> `accounts.json` **must exist as a file** before the first `docker compose up`. If it doesn't, Docker creates a directory instead and account writes will fail silently.
-
-**3.** Build and start:
-
-```bash
-docker compose up -d --build
-```
+> No `make`? Run manually:
+> ```bash
+> cp .env.example .env && cp accounts.json.example accounts.json
+> docker compose up -d --build
+> ```
 
 Dashboard → `http://localhost:3100`
+
+#### Common commands
+
+```bash
+make logs      # follow live output
+make restart   # restart the service
+make update    # pull latest code and rebuild
+make stop      # stop the service
+```
 
 ---
 
 ### Node.js (local)
 
-Requires **Node.js 20+** and **pnpm 9+**.
+Requires **Node.js 20+** and **[pnpm](https://pnpm.io) 9+**.
 
 ```bash
 git clone https://github.com/imblake-cloud/Dark-Booster
 cd Dark-Booster
-pnpm install        # installs backend + frontend deps in one command
+pnpm install
 cp .env.example .env
 cp accounts.json.example accounts.json
 pnpm run build:all
@@ -95,59 +102,48 @@ pnpm start
 
 ## ⚙️ Configuration
 
-Copy `.env.example` to `.env` and set the values.
+Copy `.env.example` to `.env` and set the values. The most important ones:
 
 | Variable | Default | Description |
 |---|---|---|
-| `ACCOUNTS_FILE_PATH` | `./accounts.json` | Path to the accounts storage file |
-| `ACCOUNTS_ENCRYPTION_KEY` | — | AES-256 key for encrypting passwords at rest (optional) |
-| `DEFAULT_STEALTH_MODE` | `invisible` | Online status for new accounts: `invisible` · `offline` · `normal` |
-| `GAME_OPTIONS` | `CS2:730\|Dota 2:570\|...` | Game presets in the dashboard (`Label:appId\|Label:appId`) |
-| `API_HOST` | `0.0.0.0` | Interface to bind the API server |
+| `API_HOST` | `0.0.0.0` | Interface to bind — `0.0.0.0` for Docker/LAN, `127.0.0.1` for local only |
 | `API_PORT` | `3100` | Dashboard and API port |
-| `API_TOKEN` | — | Bearer token for all `/api/*` routes (optional) |
-| `DISCORD_WEBHOOK_URL` | — | Webhook URL for Steam Guard prompts and error alerts (optional) |
+| `API_TOKEN` | — | If set, all `/api/*` routes require `Authorization: Bearer <token>` |
+| `DEFAULT_STEALTH_MODE` | `invisible` | Online status: `invisible` · `offline` · `normal` |
+| `GAME_OPTIONS` | `CS2:730\|...` | Quick-select game presets (`Label:appId\|Label:appId`) |
+| `ACCOUNTS_ENCRYPTION_KEY` | — | AES-256 key to encrypt passwords in `accounts.json` (optional) |
+| `DISCORD_WEBHOOK_URL` | — | Webhook for Steam Guard and error alerts (optional) |
 
-The `web/` frontend has its own `web/.env.example` for the Vite dev server proxy.
+All options are documented in `.env.example`.
+
+---
+
+## 🐧 Linux — systemd
+
+For persistent deployment on Ubuntu, Debian, Fedora, Arch, or any systemd-based distro:
+
+```bash
+sudo sh ./scripts/linux/install-systemd.sh
+```
+
+Installs Dark Booster as a systemd service that starts automatically on boot. Requires **Node.js 20+ installed system-wide** (not via nvm).
+
+```bash
+sudo systemctl start steam-hour-booster
+journalctl -u steam-hour-booster -f
+```
+
+Full guide: [`docs/LINUX_DEPLOYMENT.md`](docs/LINUX_DEPLOYMENT.md)
 
 ---
 
 ## 💻 Development
 
 ```bash
-# Install all dependencies (backend + frontend via pnpm workspace)
-pnpm install
-
-# Start backend (watch mode) + frontend dev server in separate terminals
-pnpm run dev         # backend  → http://localhost:3100
-pnpm run web:dev     # frontend → http://localhost:5173
+pnpm install                  # install all deps (backend + frontend)
+pnpm run dev                  # backend watch mode → http://localhost:3100
+pnpm run web:dev              # frontend dev server → http://localhost:5173
 ```
-
----
-
-## 🐧 Linux — systemd (Ubuntu, Debian, Fedora, Arch…)
-
-For persistent deployment on any Linux distro that uses systemd:
-
-```bash
-# Run as root on the Linux host
-sudo sh ./scripts/linux/install-systemd.sh
-```
-
-This installs Dark Booster as a systemd service with auto-start on boot. Requires **Node.js 20+ installed system-wide** (not via nvm). Full guide: [`docs/LINUX_DEPLOYMENT.md`](docs/LINUX_DEPLOYMENT.md).
-
----
-
-## 🏔 Alpine Linux / OpenRC
-
-For persistent deployment on Alpine Linux specifically (e.g. a mini PC running Alpine):
-
-```bash
-# Run as root on the Alpine host
-sh ./scripts/alpine/install-openrc.sh
-```
-
-This registers Dark Booster as an OpenRC service with auto-start on boot. Full guide: [`docs/ALPINE_DEPLOYMENT.md`](docs/ALPINE_DEPLOYMENT.md).
 
 ---
 
@@ -182,15 +178,14 @@ Dark-Booster/
 │   │   ├── services/           # API client, WebSocket client
 │   │   ├── store/              # Zustand state
 │   │   └── types/
-│   └── public/
-├── scripts/
-│   ├── linux/                  # systemd service installer (Ubuntu, Debian, Fedora, Arch…)
-│   └── alpine/                 # OpenRC service installer (Alpine Linux)
+│   └── public/                 # Static assets (favicon, logo)
+├── scripts/linux/              # systemd service installer
 ├── docs/                       # Deployment guides
+├── Makefile                    # Convenience commands (setup, start, logs…)
 ├── Dockerfile                  # Multi-stage Alpine build
 ├── docker-compose.yml
-├── .env.example
-└── accounts.json.example       # Empty accounts file — copy before first run
+├── .env.example                # All config options documented
+└── accounts.json.example       # Copy to accounts.json before first run
 ```
 
 ---
