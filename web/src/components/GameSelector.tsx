@@ -309,20 +309,24 @@ export function GameSelector({
                 onMouseEnter={() => { if (!already) setHoveredId(r.appid); }}
                 onMouseLeave={() => setHoveredId(null)}
               >
-                {/* Game icon */}
+                {/* Game thumbnail */}
                 <div style={{
-                  width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-                  background: already ? "rgba(255,255,255,0.04)" : "rgba(201,168,76,0.1)",
-                  border: `1px solid ${already ? "rgba(255,255,255,0.07)" : "rgba(201,168,76,0.2)"}`,
-                  display: "flex", alignItems: "center", justifyContent: "center",
+                  width: 56, height: 21, borderRadius: 5, flexShrink: 0,
+                  background: "rgba(0,0,0,0.4)",
+                  border: `1px solid ${already ? "rgba(255,255,255,0.07)" : "rgba(201,168,76,0.18)"}`,
+                  overflow: "hidden",
+                  opacity: already ? 0.3 : 1,
                 }}>
-                  <svg width="13" height="13" viewBox="0 0 12 12" fill="none"
-                    style={{ opacity: already ? 0.3 : 0.7 }}>
-                    <rect x="1" y="3" width="10" height="6" rx="2" stroke="currentColor" strokeWidth="1"/>
-                    <path d="M4 5.5v2M3 6.5h2" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
-                    <circle cx="8.5" cy="5.8" r="0.6" fill="currentColor"/>
-                    <circle cx="9.5" cy="6.8" r="0.6" fill="currentColor"/>
-                  </svg>
+                  <img
+                    src={`https://cdn.cloudflare.steamstatic.com/steam/apps/${r.appid}/capsule_sm_120.jpg`}
+                    alt=""
+                    style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                    onError={(e) => {
+                      const img = e.target as HTMLImageElement;
+                      img.style.display = "none";
+                      img.parentElement!.style.background = "rgba(201,168,76,0.06)";
+                    }}
+                  />
                 </div>
 
                 {/* Game name */}

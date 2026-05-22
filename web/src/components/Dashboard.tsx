@@ -123,7 +123,7 @@ export function Dashboard() {
             background: "var(--db-orange)", flexShrink: 0,
             animation: "pulse-orange 1.6s var(--spring-heavy) infinite",
           }} />
-          Sin conexión — los datos mostrados pueden estar desactualizados. Reconectando…
+          Disconnected — displayed data may be out of date. Reconnecting…
         </div>
       )}
 
@@ -141,8 +141,8 @@ export function Dashboard() {
             <path d="M6.5 4v3M6.5 8.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
           </svg>
           {errorAccounts.length === 1
-            ? `${errorAccounts[0]!.username} — error de conexión. Revisa la cuenta.`
-            : `${errorAccounts.length} cuentas en error: ${errorAccounts.map((a) => a.username).join(", ")}`
+            ? `${errorAccounts[0]!.username} — connection error.`
+            : `${errorAccounts.length} accounts with errors: ${errorAccounts.map((a) => a.username).join(", ")}`
           }
         </div>
       )}

@@ -150,22 +150,32 @@ export function AccountDetail() {
     return (
       <div style={{
         flex: 1, display: "flex", flexDirection: "column",
-        alignItems: "center", justifyContent: "center", gap: 14,
+        alignItems: "center", justifyContent: "center", gap: 16,
+        padding: 32,
       }}>
         <div style={{
-          width: 52, height: 52, borderRadius: 16,
-          background: "rgba(255,255,255,0.03)",
-          border: "1px solid rgba(255,255,255,0.07)",
-          display: "flex", alignItems: "center", justifyContent: "center",
+          padding: 4,
+          borderRadius: "50%",
+          background: "rgba(201,168,76,0.06)",
+          border: "1px solid rgba(201,168,76,0.14)",
+          boxShadow: "0 0 32px rgba(201,168,76,0.05)",
         }}>
-          <svg width="22" height="22" viewBox="0 0 22 22" fill="none" opacity={0.25}>
-            <circle cx="11" cy="11" r="9" stroke="white" strokeWidth="1.2"/>
-            <path d="M11 7v6M11 15v1" stroke="white" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
+          <img
+            src="/logo.png"
+            alt="Dark Booster"
+            width={52}
+            height={52}
+            style={{ borderRadius: "50%", display: "block", opacity: 0.45, filter: "grayscale(0.3)" }}
+          />
         </div>
-        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.2)", fontWeight: 500 }}>
-          Select an account from the sidebar
-        </span>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ fontSize: 13, color: "rgba(228,215,185,0.3)", fontWeight: 600, letterSpacing: "-0.01em" }}>
+            No account selected
+          </div>
+          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.14)", marginTop: 4, fontWeight: 400 }}>
+            Choose an account from the sidebar to manage it
+          </div>
+        </div>
       </div>
     );
   }
@@ -400,6 +410,36 @@ export function AccountDetail() {
                 </div>
               );
             })()}
+
+            {/* Game thumbnails */}
+            {snap.boostingAppIds.length > 0 && (
+              <div style={{
+                display: "flex", gap: 6, marginTop: 18,
+                overflowX: "auto", paddingBottom: 2,
+              }}>
+                {snap.boostingAppIds.map((appid) => (
+                  <div key={appid} style={{
+                    flexShrink: 0, position: "relative",
+                    borderRadius: 6, overflow: "hidden",
+                    border: "1px solid rgba(201,168,76,0.18)",
+                    background: "rgba(0,0,0,0.4)",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.4)",
+                  }}>
+                    <img
+                      src={steamImg(appid)}
+                      alt={getGameName(appid)}
+                      style={{ display: "block", width: 90, height: 34, objectFit: "cover" }}
+                      onError={(e) => { (e.target as HTMLImageElement).closest("div")!.remove(); }}
+                    />
+                    <div style={{
+                      position: "absolute", bottom: 0, left: 0, right: 0,
+                      background: "linear-gradient(to top, rgba(0,0,0,0.75), transparent)",
+                      height: 16,
+                    }} />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
