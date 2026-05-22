@@ -57,3 +57,11 @@ web/.agents/
 skills-lock.json
 web/skills-lock.json
 agent.md
+
+# Design assets — branding files, not needed to run the app
+web/Logo Dark Booster/
+web/Logo*/
+*.psd
+*.ai
+*.fig
+*.sketch
