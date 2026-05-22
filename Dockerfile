@@ -4,17 +4,19 @@ FROM node:22-alpine AS builder
 # Build tools needed for native addons (steam-user)
 RUN apk add --no-cache python3 make gcc g++ musl-dev
 
-# Install pnpm
-RUN npm install -g pnpm
+# Install pnpm (pinned — avoids breaking changes in newer major versions)
+RUN npm install -g pnpm@10.26.0
+
+ENV CI=true
 
 WORKDIR /build
 
 # Copy workspace config + lockfile first (cached layer — only invalidated on lockfile change)
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc pnpm.json ./
 COPY web/package.json ./web/
 
 # Install all dependencies (root + web via workspace, single command)
-RUN pnpm install --frozen-lockfile --config.minimumReleaseAge=0
+RUN pnpm install --frozen-lockfile --config.minimumReleaseAge=0 --ignore-scripts
 
 # Copy source (changes most frequently — kept after the install layers)
 COPY tsconfig.json ./
@@ -25,7 +27,7 @@ COPY web/ ./web/
 RUN pnpm run build:all
 
 # Drop devDependencies before copying to runtime stage
-RUN pnpm install --prod
+RUN pnpm install --prod --config.minimumReleaseAge=0 --ignore-scripts
 
 
 # Stage 2: Runtime — minimal Alpine image
