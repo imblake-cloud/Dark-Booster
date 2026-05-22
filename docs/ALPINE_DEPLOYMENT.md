@@ -109,13 +109,14 @@ Run as root:
 ```sh
 apk update
 apk add --no-cache git nodejs npm
+npm install -g pnpm
 ```
 
 Check versions:
 
 ```sh
 node -v
-npm -v
+pnpm -v
 ```
 
 ### 2) Copy project to server
@@ -237,15 +238,14 @@ Notes:
 ### 6) Build once
 
 ```sh
-npm install
-npm --prefix web install
-npm run build:all
+pnpm install        # installs backend + frontend deps in one command
+pnpm run build:all
 ```
 
 Quick manual test:
 
 ```sh
-npm run start:prod
+pnpm run start:prod
 ```
 
 Open:
@@ -296,7 +296,7 @@ Common issues:
 
 2. Discord OAuth error — check `DASHBOARD_DISCORD_CLIENT_ID`, `DASHBOARD_DISCORD_CLIENT_SECRET`, `DASHBOARD_DISCORD_REDIRECT_URI`, `DASHBOARD_ALLOWED_DISCORD_USER_IDS`. If OAuth rejects `steam.local`, verify the exact redirect URL is added in Discord Developer Portal.
 
-3. Dashboard not loading — ensure `npm run build:all` completed, `web/dist/index.html` exists, and `DASHBOARD_STATIC_ENABLED=true`.
+3. Dashboard not loading — ensure `pnpm run build:all` completed, `web/dist/index.html` exists, and `DASHBOARD_STATIC_ENABLED=true`.
 
 ### 10) Update flow
 
@@ -308,9 +308,8 @@ Or manually:
 
 ```sh
 cd /opt/steam-hour-booster
-npm install
-npm --prefix web install
-npm run build:all
+pnpm install
+pnpm run build:all
 rc-service steam-hour-booster restart
 ```
 

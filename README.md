@@ -17,6 +17,8 @@
     <a href="#-quick-start">Quick Start</a> ·
     <a href="#%EF%B8%8F-configuration">Configuration</a> ·
     <a href="#-development">Development</a> ·
+    <a href="#-linux--systemd-ubuntu-debian-fedora-arch">Linux</a> ·
+    <a href="#%EF%B8%8F-alpine-linux--openrc">Alpine</a> ·
     <a href="https://github.com/imblake-cloud/Dark-Booster/issues">Issues</a>
   </p>
 </div>
@@ -77,17 +79,16 @@ Dashboard → `http://localhost:3100`
 
 ### Node.js (local)
 
-Requires **Node.js 20+**.
+Requires **Node.js 20+** and **pnpm 9+**.
 
 ```bash
 git clone https://github.com/imblake-cloud/Dark-Booster
 cd Dark-Booster
-npm install
-npm --prefix web install
+pnpm install        # installs backend + frontend deps in one command
 cp .env.example .env
 cp accounts.json.example accounts.json
-npm run build:all
-npm start
+pnpm run build:all
+pnpm start
 ```
 
 ---
@@ -114,19 +115,32 @@ The `web/` frontend has its own `web/.env.example` for the Vite dev server proxy
 ## 💻 Development
 
 ```bash
-# Install all dependencies
-npm install && npm --prefix web install
+# Install all dependencies (backend + frontend via pnpm workspace)
+pnpm install
 
 # Start backend (watch mode) + frontend dev server in separate terminals
-npm run dev          # backend  → http://localhost:3100
-npm run web:dev      # frontend → http://localhost:5173
+pnpm run dev         # backend  → http://localhost:3100
+pnpm run web:dev     # frontend → http://localhost:5173
 ```
+
+---
+
+## 🐧 Linux — systemd (Ubuntu, Debian, Fedora, Arch…)
+
+For persistent deployment on any Linux distro that uses systemd:
+
+```bash
+# Run as root on the Linux host
+sudo sh ./scripts/linux/install-systemd.sh
+```
+
+This installs Dark Booster as a systemd service with auto-start on boot. Requires **Node.js 20+ installed system-wide** (not via nvm). Full guide: [`docs/LINUX_DEPLOYMENT.md`](docs/LINUX_DEPLOYMENT.md).
 
 ---
 
 ## 🏔 Alpine Linux / OpenRC
 
-For persistent deployment on Alpine Linux (e.g. a mini PC or VPS):
+For persistent deployment on Alpine Linux specifically (e.g. a mini PC running Alpine):
 
 ```bash
 # Run as root on the Alpine host
@@ -169,7 +183,9 @@ Dark-Booster/
 │   │   ├── store/              # Zustand state
 │   │   └── types/
 │   └── public/
-├── scripts/alpine/             # OpenRC service installer for Alpine Linux
+├── scripts/
+│   ├── linux/                  # systemd service installer (Ubuntu, Debian, Fedora, Arch…)
+│   └── alpine/                 # OpenRC service installer (Alpine Linux)
 ├── docs/                       # Deployment guides
 ├── Dockerfile                  # Multi-stage Alpine build
 ├── docker-compose.yml

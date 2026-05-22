@@ -1,6 +1,7 @@
 #!/bin/sh
-# Installs steam-hour-booster as an OpenRC service on Alpine Linux.
-# Must be run as root. Safe to re-run (idempotent).
+# Installs steam-hour-booster as a systemd service on any Linux distro.
+# Requires: Node.js 20+ installed system-wide, systemd, root access.
+# Safe to re-run (idempotent).
 set -eu
 
 # ---------------------------------------------------------------------------
@@ -46,7 +47,7 @@ trap on_error INT TERM
 # ---------------------------------------------------------------------------
 check_dependencies() {
     local missing=""
-    for cmd in apk tar id addgroup adduser install chown cp touch rc-update pnpm; do
+    for cmd in node pnpm tar install chown cp systemctl useradd groupadd id; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             missing="$missing $cmd"
         fi
@@ -58,9 +59,26 @@ check_dependencies() {
 }
 
 # ---------------------------------------------------------------------------
+# Node version check (requires 20+)
+# ---------------------------------------------------------------------------
+check_node_version() {
+    local version
+    version="$(node --version 2>/dev/null | sed 's/v//' | cut -d. -f1)"
+    if [ -z "$version" ] || [ "$version" -lt 20 ]; then
+        log_error "Node.js 20+ is required. Found: $(node --version 2>/dev/null || echo 'not found')"
+        log_error "Install Node.js 20+ system-wide (not via nvm) before running this script."
+        log_error "  Ubuntu/Debian: https://github.com/nodesource/distributions"
+        log_error "  Fedora/RHEL:   sudo dnf install nodejs"
+        log_error "  Arch:          sudo pacman -S nodejs npm"
+        exit 1
+    fi
+    log_info "Node.js $(node --version) detected."
+}
+
+# ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-group_exists() { grep -q "^${1}:" /etc/group 2>/dev/null; }
+group_exists() { getent group "$1" >/dev/null 2>&1; }
 user_exists()  { id -u "$1" >/dev/null 2>&1; }
 
 ensure_dir() {
@@ -68,17 +86,8 @@ ensure_dir() {
     if [ ! -d "$dir" ]; then
         run_cmd mkdir -p -- "$dir" || { log_error "Cannot create directory: $dir"; exit 1; }
     fi
-    run_cmd chown "${owner}" -- "$dir"
+    run_cmd chown "$owner" -- "$dir"
     run_cmd chmod "$mode" -- "$dir"
-}
-
-ensure_log_file() {
-    local file="$1" owner="$2"
-    if [ ! -f "$file" ]; then
-        run_cmd touch -- "$file" || { log_error "Cannot create log file: $file"; exit 1; }
-    fi
-    run_cmd chown "${owner}" -- "$file"
-    run_cmd chmod 0644 -- "$file"
 }
 
 # ---------------------------------------------------------------------------
@@ -96,33 +105,49 @@ if [ "$DRY_RUN" = "1" ]; then
 fi
 
 check_dependencies
+check_node_version
+
+# Detect node binary path (must be system-wide, not nvm)
+NODE_BIN="$(command -v node)"
+log_info "Using node binary: $NODE_BIN"
+
+# Warn if node is inside a home directory (nvm)
+case "$NODE_BIN" in
+    /home/*|/root/*)
+        log_warn "Node.js appears to be installed via nvm or inside a home directory."
+        log_warn "systemd services run as a different user and may not find node at this path."
+        log_warn "Consider installing Node.js system-wide (e.g. NodeSource) for reliable service operation."
+        ;;
+esac
 
 # ---------------------------------------------------------------------------
 # Steps
 # ---------------------------------------------------------------------------
-log_step "1/9 — Install runtime packages"
-run_cmd apk add --no-cache nodejs npm
-
-log_step "2/9 — Create service user/group"
+log_step "1/9 — Create service user/group"
 if ! group_exists "$APP_GROUP"; then
     log_info "Creating group: $APP_GROUP"
-    run_cmd addgroup -S "$APP_GROUP"
+    run_cmd groupadd --system "$APP_GROUP"
 else
     log_info "Group already exists: $APP_GROUP"
 fi
 
 if ! user_exists "$APP_USER"; then
     log_info "Creating user: $APP_USER"
-    run_cmd adduser -S -D -H -h "$APP_DIR" -s /sbin/nologin -G "$APP_GROUP" "$APP_USER"
+    run_cmd useradd \
+        --system \
+        --no-create-home \
+        --home-dir "$APP_DIR" \
+        --shell /sbin/nologin \
+        --gid "$APP_GROUP" \
+        "$APP_USER"
 else
     log_info "User already exists: $APP_USER"
 fi
 
-log_step "3/9 — Sync project to ${APP_DIR}"
+log_step "2/9 — Sync project to ${APP_DIR}"
 run_cmd mkdir -p -- "$APP_DIR"
 if [ "$ROOT_DIR" != "$APP_DIR" ]; then
     log_info "Copying from $ROOT_DIR → $APP_DIR"
-    # Explicit error check on the pipeline since sh lacks pipefail
     if [ "$DRY_RUN" != "1" ]; then
         tar \
             --exclude="./node_modules" \
@@ -144,7 +169,7 @@ else
     log_info "Source and destination are the same — skipping copy."
 fi
 
-log_step "4/9 — Install Node dependencies"
+log_step "3/9 — Install Node dependencies"
 if [ "$DRY_RUN" != "1" ]; then
     cd "$APP_DIR" || { log_error "Cannot cd to $APP_DIR"; exit 1; }
     pnpm install --frozen-lockfile || { log_error "pnpm install failed."; exit 1; }
@@ -152,38 +177,40 @@ else
     log_dry "pnpm install --frozen-lockfile (in $APP_DIR)"
 fi
 
-log_step "5/9 — Build backend + web"
+log_step "4/9 — Build backend + web"
 if [ "$DRY_RUN" != "1" ]; then
     pnpm run build:all || { log_error "Build failed."; exit 1; }
 else
     log_dry "pnpm run build:all"
 fi
 
-log_step "6/9 — Install OpenRC service"
-OPENRC_INIT="${APP_DIR}/scripts/alpine/openrc/${SERVICE_NAME}"
-OPENRC_CONF="${APP_DIR}/scripts/alpine/openrc/${SERVICE_NAME}.conf"
+log_step "5/9 — Set permissions"
+ensure_dir "$APP_DIR" "${APP_USER}:${APP_GROUP}" 0755
 
-if [ ! -f "$OPENRC_INIT" ]; then
-    log_error "OpenRC init script not found: $OPENRC_INIT"
+log_step "6/9 — Install systemd unit"
+SERVICE_TEMPLATE="${APP_DIR}/scripts/linux/steam-hour-booster.service"
+SERVICE_DEST="/etc/systemd/system/${SERVICE_NAME}.service"
+
+if [ ! -f "$SERVICE_TEMPLATE" ]; then
+    log_error "Service template not found: $SERVICE_TEMPLATE"
     exit 1
 fi
-run_cmd install -m 0755 "$OPENRC_INIT" "/etc/init.d/${SERVICE_NAME}"
 
-if [ ! -f "/etc/conf.d/${SERVICE_NAME}" ]; then
-    if [ ! -f "$OPENRC_CONF" ]; then
-        log_error "OpenRC conf template not found: $OPENRC_CONF"
-        exit 1
-    fi
-    run_cmd install -m 0644 "$OPENRC_CONF" "/etc/conf.d/${SERVICE_NAME}"
-    log_info "Installed conf: /etc/conf.d/${SERVICE_NAME}"
+if [ "$DRY_RUN" != "1" ]; then
+    sed \
+        -e "s|__APP_DIR__|${APP_DIR}|g" \
+        -e "s|__APP_USER__|${APP_USER}|g" \
+        -e "s|__APP_GROUP__|${APP_GROUP}|g" \
+        -e "s|__NODE_BIN__|${NODE_BIN}|g" \
+        "$SERVICE_TEMPLATE" > "$SERVICE_DEST"
+    chmod 0644 "$SERVICE_DEST"
+    log_info "Installed: $SERVICE_DEST"
 else
-    log_info "conf.d entry already exists — skipping to preserve local edits."
+    log_dry "sed substitution: $SERVICE_TEMPLATE → $SERVICE_DEST"
 fi
 
-log_step "7/9 — Set permissions"
-ensure_dir  "$APP_DIR" "${APP_USER}:${APP_GROUP}" 0755
-ensure_log_file "/var/log/steam-hour-booster.log"     "${APP_USER}:${APP_GROUP}"
-ensure_log_file "/var/log/steam-hour-booster.err.log" "${APP_USER}:${APP_GROUP}"
+log_step "7/9 — Reload systemd daemon"
+run_cmd systemctl daemon-reload
 
 log_step "8/9 — Ensure .env exists"
 if [ ! -f "${APP_DIR}/.env" ]; then
@@ -201,14 +228,14 @@ fi
 
 log_step "9/9 — Enable service at boot"
 if [ "$DRY_RUN" != "1" ]; then
-    if rc-update show default 2>/dev/null | grep -q "$SERVICE_NAME"; then
-        log_info "Service already in default runlevel."
+    if systemctl is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
+        log_info "Service already enabled."
     else
-        rc-update add "$SERVICE_NAME" default >/dev/null 2>&1 \
-            || log_warn "rc-update add failed — enable manually: rc-update add $SERVICE_NAME default"
+        run_cmd systemctl enable "$SERVICE_NAME" \
+            || log_warn "systemctl enable failed — enable manually: systemctl enable $SERVICE_NAME"
     fi
 else
-    log_dry "rc-update add $SERVICE_NAME default"
+    log_dry "systemctl enable $SERVICE_NAME"
 fi
 
 # ---------------------------------------------------------------------------
@@ -217,7 +244,8 @@ fi
 printf '\n'
 log_info "Installation complete."
 printf '\n'
-printf '  Review: %s/.env\n' "$APP_DIR"
-printf '  Then:   rc-service %s start\n' "$SERVICE_NAME"
-printf '          rc-service %s status\n' "$SERVICE_NAME"
+printf '  Review:  %s/.env\n' "$APP_DIR"
+printf '  Then:    systemctl start %s\n' "$SERVICE_NAME"
+printf '           systemctl status %s\n' "$SERVICE_NAME"
+printf '  Logs:    journalctl -u %s -f\n' "$SERVICE_NAME"
 printf '\n'

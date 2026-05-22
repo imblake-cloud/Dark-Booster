@@ -2,6 +2,10 @@
 node_modules/
 web/node_modules/
 
+# npm lockfiles — project uses pnpm (pnpm-lock.yaml is the canonical lockfile)
+package-lock.json
+web/package-lock.json
+
 # ── Build output ──────────────────────────────────────────────────
 dist/
 web/dist/
@@ -52,3 +56,4 @@ premortem-*.md
 web/.agents/
 skills-lock.json
 web/skills-lock.json
+agent.md

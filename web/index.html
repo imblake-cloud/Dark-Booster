@@ -3,12 +3,65 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dark Booster</title>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
-    <link rel="apple-touch-icon" href="/logo.png">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <!-- Primary meta -->
+    <title>Dark Booster — Steam Hour Booster</title>
+    <meta name="description" content="Self-hosted multi-account Steam hour booster. Boost up to 32 games per account simultaneously with a real-time dashboard, Steam Guard support, and Discord alerts." />
+    <meta name="application-name" content="Dark Booster" />
+    <meta name="theme-color" content="#0f0f0f" />
+
+    <!-- Private dashboard — don't index -->
+    <meta name="robots" content="noindex, nofollow" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="alternate icon" type="image/svg+xml" href="/favicon-d.svg" />
+    <link rel="apple-touch-icon" href="/logo.png" />
+
+    <!-- Open Graph (sharing, Slack previews, etc.) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Dark Booster — Steam Hour Booster" />
+    <meta property="og:description" content="Self-hosted multi-account Steam hour booster with real-time dashboard, Steam Guard support, proxy per account, and Discord alerts." />
+    <meta property="og:image" content="/logo-render.svg" />
+    <meta property="og:site_name" content="Dark Booster" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Dark Booster — Steam Hour Booster" />
+    <meta name="twitter:description" content="Self-hosted multi-account Steam hour booster with real-time dashboard and Steam Guard support." />
+    <meta name="twitter:image" content="/logo-render.svg" />
+
+    <!-- Structured data: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Dark Booster",
+      "description": "Self-hosted multi-account Steam hour booster. Boosts up to 32 games per account simultaneously with a real-time web dashboard, Steam Guard support, per-account proxies, and Discord webhook alerts.",
+      "applicationCategory": "UtilitiesApplication",
+      "operatingSystem": "Linux, Windows, macOS",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "featureList": [
+        "Multi-account Steam hour boosting",
+        "Up to 32 games per account simultaneously",
+        "Real-time WebSocket dashboard",
+        "Steam Guard support (TOTP + mobile)",
+        "Per-account HTTP/S proxy",
+        "Discord webhook alerts",
+        "AES-256 password encryption",
+        "Docker deployment"
+      ]
+    }
+    </script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
   </head>
   <body>
     <div id="root"></div>

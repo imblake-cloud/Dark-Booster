@@ -1,5 +1,5 @@
 #!/bin/sh
-# Updates an already-installed steam-hour-booster service on Alpine Linux.
+# Updates an already-installed steam-hour-booster service on Linux (systemd).
 # Stops the service, rebuilds, and restarts. Must be run as root.
 set -eu
 
@@ -35,7 +35,7 @@ run_cmd() {
 # ---------------------------------------------------------------------------
 on_error() {
     log_error "Update failed. The service may be stopped — check status:"
-    log_error "  rc-service $SERVICE_NAME status"
+    log_error "  systemctl status $SERVICE_NAME"
     exit 1
 }
 trap on_error INT TERM
@@ -45,7 +45,7 @@ trap on_error INT TERM
 # ---------------------------------------------------------------------------
 check_dependencies() {
     local missing=""
-    for cmd in pnpm rc-service; do
+    for cmd in pnpm systemctl; do
         if ! command -v "$cmd" >/dev/null 2>&1; then
             missing="$missing $cmd"
         fi
@@ -72,13 +72,13 @@ check_dependencies
 
 if [ ! -d "$APP_DIR" ]; then
     log_error "App directory not found: $APP_DIR"
-    log_error "Run install-openrc.sh first."
+    log_error "Run install-systemd.sh first."
     exit 1
 fi
 
-if [ ! -f "/etc/init.d/${SERVICE_NAME}" ]; then
-    log_error "Service not installed: /etc/init.d/${SERVICE_NAME}"
-    log_error "Run install-openrc.sh first."
+if [ ! -f "/etc/systemd/system/${SERVICE_NAME}.service" ]; then
+    log_error "Service unit not found: /etc/systemd/system/${SERVICE_NAME}.service"
+    log_error "Run install-systemd.sh first."
     exit 1
 fi
 
@@ -86,8 +86,8 @@ fi
 # Steps
 # ---------------------------------------------------------------------------
 log_step "1/5 — Stop service"
-if rc-service "$SERVICE_NAME" status >/dev/null 2>&1; then
-    run_cmd rc-service "$SERVICE_NAME" stop \
+if systemctl is-active "$SERVICE_NAME" >/dev/null 2>&1; then
+    run_cmd systemctl stop "$SERVICE_NAME" \
         || log_warn "Stop returned non-zero — proceeding anyway."
     log_info "Service stopped."
 else
@@ -110,14 +110,14 @@ else
 fi
 
 log_step "4/5 — Start service"
-run_cmd rc-service "$SERVICE_NAME" start \
-    || { log_error "Service failed to start."; exit 1; }
+run_cmd systemctl start "$SERVICE_NAME" \
+    || { log_error "Service failed to start. Check: journalctl -u $SERVICE_NAME -n 50"; exit 1; }
 
 log_step "5/5 — Service status"
 if [ "$DRY_RUN" != "1" ]; then
-    rc-service "$SERVICE_NAME" status || true
+    systemctl status "$SERVICE_NAME" --no-pager || true
 else
-    log_dry "rc-service $SERVICE_NAME status"
+    log_dry "systemctl status $SERVICE_NAME"
 fi
 
 # ---------------------------------------------------------------------------
@@ -125,4 +125,5 @@ fi
 # ---------------------------------------------------------------------------
 printf '\n'
 log_info "Update complete."
+printf '  Logs: journalctl -u %s -f\n' "$SERVICE_NAME"
 printf '\n'

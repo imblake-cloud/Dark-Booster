@@ -1,18 +1,20 @@
 # Stage 1: Build — install all dependencies and compile
 FROM node:22-alpine AS builder
 
-# Build tools needed for any native npm addons
+# Build tools needed for native addons (steam-user)
 RUN apk add --no-cache python3 make gcc g++ musl-dev
+
+# Install pnpm
+RUN npm install -g pnpm
 
 WORKDIR /build
 
-# Install backend dependencies (cached layer — only invalidated on lockfile change)
-COPY package.json package-lock.json ./
-RUN npm ci
+# Copy workspace config + lockfile first (cached layer — only invalidated on lockfile change)
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
+COPY web/package.json ./web/
 
-# Install frontend dependencies (cached layer)
-COPY web/package.json web/package-lock.json ./web/
-RUN npm ci --prefix web
+# Install all dependencies (root + web via workspace, single command)
+RUN pnpm install --frozen-lockfile
 
 # Copy source (changes most frequently — kept after the install layers)
 COPY tsconfig.json ./
@@ -20,10 +22,10 @@ COPY src/ ./src/
 COPY web/ ./web/
 
 # Build TypeScript backend + Vite frontend
-RUN npm run build:all
+RUN pnpm run build:all
 
 # Drop devDependencies before copying to runtime stage
-RUN npm prune --omit=dev
+RUN pnpm install --prod
 
 
 # Stage 2: Runtime — minimal Alpine image
