@@ -14,7 +14,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml .npmrc ./
 COPY web/package.json ./web/
 
 # Install all dependencies (root + web via workspace, single command)
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --frozen-lockfile --config.minimumReleaseAge=0
 
 # Copy source (changes most frequently — kept after the install layers)
 COPY tsconfig.json ./
