@@ -577,25 +577,22 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
           return;
         }
         settled = true;
-        cleanup();
+        // Keep the modal visible with a status message instead of closing it abruptly.
+        // The entry will be replaced when the next login attempt registers a new challenge,
+        // or cleared by finalizeSuccessfulLogin if login succeeds via refresh token.
+        this.updatePendingChallenge(accountId, {
+          requiresCode: false,
+          canApprove: false,
+          message: "Steam ended the session. Dark Booster will retry automatically — please wait.",
+        });
+        cleanupListeners();
         reject(error);
       };
 
-      const resolveLogin = (refreshToken: string) => {
-        if (settled) {
-          return;
-        }
-        settled = true;
-        cleanup();
-        resolve(refreshToken);
-      };
-
-      const cleanup = () => {
-        this.clearPendingGuard(accountId);
+      const cleanupListeners = () => {
         session.removeAllListeners("authenticated");
         session.removeAllListeners("timeout");
         session.removeAllListeners("error");
-        session.removeAllListeners("remoteInteraction");
       };
 
       session.on("authenticated", () => {
@@ -604,22 +601,18 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
           return;
         }
         this.logger.info({ accountId }, "Steam session authenticated via approve/code flow.");
-        resolveLogin(session.refreshToken);
+        settled = true;
+        this.clearPendingGuard(accountId);
+        cleanupListeners();
+        resolve(session.refreshToken);
       });
 
       session.on("timeout", () => {
-        rejectLogin(new Error("Steam mobile approval timed out. Retry login or submit a code."));
+        rejectLogin(new Error("Steam session timed out."));
       });
 
       session.on("error", (error) => {
         rejectLogin(error);
-      });
-
-      session.on("remoteInteraction", () => {
-        this.updateState(accountId, {
-          status: AccountStatus.CONNECTING,
-          lastError: "Approval prompt opened in Steam Mobile. Approve to continue login.",
-        });
       });
 
       void (async () => {
@@ -650,11 +643,9 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
     rawActions?: Array<{ type: number; detail?: string }>,
   ): void {
     const actions = rawActions ?? [];
-    const hasApprove = actions.some(
-      (action) =>
-        action.type === EAuthSessionGuardType.DeviceConfirmation ||
-        action.type === EAuthSessionGuardType.EmailConfirmation,
-    );
+    // Mobile approval (DeviceConfirmation) is intentionally disabled — it triggers
+    // Steam's suspicious-login security checks and causes blocked logins. Code-only auth is used instead.
+    const hasApprove = false;
     const hasCode = actions.some(
       (action) =>
         action.type === EAuthSessionGuardType.DeviceCode ||
@@ -664,18 +655,11 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
     const emailDomain = actions.find((action) => action.type === EAuthSessionGuardType.EmailCode)
       ?.detail;
 
-    const challengeType: PendingGuardChallenge["type"] = hasApprove
-      ? hasCode
-        ? "approve_or_code"
-        : "approve"
-      : "code";
+    const challengeType: PendingGuardChallenge["type"] = "code";
 
-    const message =
-      challengeType === "approve_or_code"
-        ? "Approve in Steam Mobile or submit a Steam Guard code."
-        : challengeType === "approve"
-          ? "Approve login from the Steam Mobile app."
-          : "Steam Guard code required.";
+    const message = emailDomain
+      ? `Enter the Steam Guard code sent to your email (${emailDomain}).`
+      : "Enter your Steam Guard code from the Steam Mobile Authenticator app.";
 
     const challenge: PendingGuardChallenge = {
       challengeId: `${accountId}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,

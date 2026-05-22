@@ -114,14 +114,6 @@ export function GuardModal({ challenge, onClose }: Props) {
         {/* Steam's own message */}
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 12, marginBottom: 18, lineHeight: 1.65, fontWeight: 500 }}>
           {challenge.message}
-          {challenge.domain && (
-            <>
-              <br />
-              <span style={{ color: "rgba(255,255,255,0.28)", fontSize: 11 }}>
-                Domain: {challenge.domain}
-              </span>
-            </>
-          )}
         </p>
 
         {challenge.lastCodeWrong && (
