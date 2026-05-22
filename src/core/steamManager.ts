@@ -395,6 +395,14 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
       return;
     }
 
+    // If the user has an active code-entry modal open, do not start a new login
+    // session — that would trigger another Steam notification and reset the modal.
+    const activeGuard = this.pendingGuards.get(accountId);
+    if (activeGuard?.challenge.requiresCode) {
+      this.logger.info({ accountId }, "Steam Guard code entry pending — skipping login retry.");
+      return;
+    }
+
     const client = this.getOrCreateClient(account);
     if (this.isClientConnected(client)) {
       this.updateState(accountId, {
@@ -761,7 +769,6 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
         return;
       }
       this.logger.warn({ accountId, message }, "Steam disconnected.");
-      this.clearPendingGuard(accountId);
       this.scheduleReconnect(accountId, message || "Disconnected from Steam.");
     });
 
@@ -824,7 +831,6 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
 
       const err = sanitizeErrorMessage(error);
       this.logger.error({ accountId, err }, "Steam client error.");
-      this.clearPendingGuard(accountId);
       this.scheduleReconnect(accountId, err);
     });
   }
@@ -836,17 +842,22 @@ export class SteamManager extends EventEmitter<SteamManagerEventMap> {
 
     const state = this.requireState(accountId);
     const nextRetry = state.retryCount + 1;
-    const delayMs = jitter(Math.min(
-      this.settings.baseReconnectDelayMs * 2 ** Math.max(0, nextRetry - 1),
-      this.settings.maxReconnectDelayMs,
-    ));
+
+    // Rate-limited by Steam → jump straight to the maximum delay so we stop hammering.
+    const isRateLimited = /ratelimit|rate.?limit/i.test(reason);
+    const effectiveBase = isRateLimited
+      ? this.settings.maxReconnectDelayMs
+      : this.settings.baseReconnectDelayMs * 2 ** Math.max(0, nextRetry - 1);
+    const delayMs = jitter(Math.min(effectiveBase, this.settings.maxReconnectDelayMs));
 
     this.updateState(accountId, {
       status: AccountStatus.ERROR,
       retryCount: nextRetry,
       lastError: reason,
     });
-    this.clearPendingGuard(accountId);
+    // Do NOT clear the pending guard here — if a guard challenge is visible the modal
+    // must stay open. The guard is cleared by finalizeSuccessfulLogin on success, or
+    // replaced by registerSteamSessionChallenge when the next login attempt begins.
 
     this.clearReconnectTimer(accountId);
 
